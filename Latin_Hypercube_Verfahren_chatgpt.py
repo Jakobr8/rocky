@@ -35,8 +35,8 @@ def latin_hypercube(samples, variables):
     return matrix
 
 # Beispielaufruf
-samples = 3
-variables = 4
+samples = 10000
+variables = 5
 
 result = latin_hypercube(samples, variables)
 #

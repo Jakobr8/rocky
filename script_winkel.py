@@ -1,7 +1,7 @@
 #
 '''
 Name for generated for macro: Winkel bestimmen
-Macro description: Bestimmt den Winkel 
+Macro description: Bestimmt den Winkel des Mittelpunkts der Kugel zur Horizontalen
 '''
 #
 import os
@@ -10,14 +10,15 @@ import importlib
 import math
 import numpy as np
 #
-sys.path.append("C:/Users/jakob/OneDrive/Desktop/IP Lentz/Python_Skripts")
+#trafo_path = "C:/Users/jakob/OneDrive/Desktop/IP Lentz/Python_Skripts"
+trafo_path = "C:\SeafileContainer\Seafile\Meine Bibliothek\Planetenkugelmuehle\Programme\eigene"
+#
+sys.path.append(trafo_path)
 import trafo
 #
 #
 #
 #Verzeichnis des geöffneten Rocky-Projekts  
-#cur_dir = "C:\Simulationen\Planetenkugelmuehle\Rocky\Simulationen\zweifache_Schraegstellung/1Kugel"
-#print(cur_dir)
 cur_dir = os.path.dirname(project.GetProjectFilename())
 #
 #logfile öffnen
@@ -25,7 +26,7 @@ log_file = open(cur_dir + "\\log_file.txt","a+")
 log_file.write("*************************************************\n")
 log_file.write("Logfile started \n")
 #
-log_file.write("C:/Users/jakob/OneDrive/Desktop/IP Lentz/Python_Skripts")
+log_file.write(trafo_path)
 #
 #config importieren
 sys.path.append(cur_dir)
@@ -54,39 +55,36 @@ times = study.GetTimeSet().GetValues()
 start_time_step = int(np.searchsorted(times, config.t_pic, side = "left"))
 end_time_step = int(np.searchsorted(times, config.t3, side = "left"))
 #
-cur_time_step = 11000
-cur_time = times[cur_time_step]
-log_file.write("aktueller Zeitschritt:" + str(cur_time_step)+"\n")
-#
-x0 = list(particles.GetGridFunction('Particle X-Coordinate').GetArray(time_step=cur_time_step))
-y0 = list(particles.GetGridFunction('Particle Y-Coordinate').GetArray(time_step=cur_time_step))
-z0 = list(particles.GetGridFunction('Particle Z-Coordinate').GetArray(time_step=cur_time_step))
-#
-log_file.write("x-Koordinate in 0_Kosys: " + str(x0[0])+"\n")
-log_file.write("y-Koordinate in 0_Kosys: " + str(y0[0])+"\n")
-log_file.write("z-Koordinate in 0_Kosys: " + str(z0[0])+"\n")
-#
 log_file.write("transformation\n")
-trafo = trafo.Trafo(80, 20, config.u, -22) # Radius Sonne, Winkel Schrägstellung, Drehzahl-Sonne, Relative z-Koordinate Bechermittelpunkt
-#
-start_time = times[start_time_step]
-pos = ang(start_time, config.t1, config.t2, np.pi*config.u/30)
-phase = config.u/abs(config.u)*(abs(pos)%(2*np.pi))
+trafo = trafo.Trafo(125, 5, config.u, config.alpha) # Radius Sonne, Relative z-Koordinate Bechermittelpunkt, Drehzahl-Sonne, Winkel Schrägstellung
 #
 #
-cur_alpha = phase + trafo.om1 * (cur_time-start_time)
-cur_gamma = trafo.n * cur_alpha
+def get_angle(trafo,cur_time_step,times):
+    #
+    x0 = list(particles.GetGridFunction('Particle X-Coordinate').GetArray(time_step=cur_time_step))
+    y0 = list(particles.GetGridFunction('Particle Y-Coordinate').GetArray(time_step=cur_time_step))
+    z0 = list(particles.GetGridFunction('Particle Z-Coordinate').GetArray(time_step=cur_time_step))
+    #
+    cur_alpha = ang(times[cur_time_step], config.t1, config.t2, np.pi*config.u/30)%(2*np.pi)
+    cur_gamma = trafo.n * cur_alpha
+    cur_coords = trafo.trafo_x_2_0((1000*x0[0], 1000*y0[0], 1000*z0[0]), cur_alpha, cur_gamma)
+    #
+    cur_ang = math.atan(cur_coords[1]/cur_coords[0])   # Berechnung von Winkel der Kugel zu x-Achse von Becherkoordinatensystem mit Tangens   
+    return cur_ang * 180/math.pi
 #
-cur_coords = trafo.trafo_x_2_0((1000*x0[0], 1000*y0[0], 1000*z0[0]), cur_alpha, cur_gamma)
-log_file.write("x-Koordinate in 2_Kosys: " + str(cur_coords[0])+"\n")
-log_file.write("y-Koordinate in 2_Kosys: " + str(cur_coords[1])+"\n")
-log_file.write("z-Koordinate in 2_Kosys: " + str(cur_coords[2])+"\n")
 #
 #
-beta = math.atan(x0[0]/y0[0])   # Berechnung von Winkel der Kugel zu x-Achse von Becherkoordinatensystem mit Tangens   
-beta = beta * 180/math.pi
+res_file = open(cur_dir + "\\results.txt","w+")
+sum = 0
+for cur_time_step in range(start_time_step,end_time_step):
+    cur_ang = get_angle(trafo,cur_time_step,times)
+    sum += cur_ang
+    res_file.write(f"{times[cur_time_step]:.5f}" + "\t" + str(cur_ang) + "\n")
+res_file.close()
 #
-log_file.write("Winkel Beta: " + str(beta) + "\n")
+sensi_file = open(cur_dir + "\\sensitivity_results.txt","a+")
+sensi_file.write(str(sum/(end_time_step-start_time_step)))
+sensi_file.close()
 #
 log_file.write("ende")
 log_file.close()
