@@ -83,7 +83,7 @@ for cur_time_step in range(start_time_step,end_time_step):
 res_file.close()
 #
 sensi_file = open(cur_dir + "\\sensitivity_results.txt","a+")
-sensi_file.write(str(sum/(end_time_step-start_time_step)))
+sensi_file.write(str(sum/(end_time_step-start_time_step)) + "\n")
 sensi_file.close()
 #
 log_file.write("ende")
